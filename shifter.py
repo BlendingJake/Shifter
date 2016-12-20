@@ -95,7 +95,8 @@ bpy.types.Object.shifter_shift = FloatVectorProperty(name="Shift", unit="LENGTH"
 
 class ShifterPanel(bpy.types.Panel):
     bl_idname = "OBJECT_PT_shifter_panel"
-    bl_label = "Shifter Panel"
+    bl_label = "Shifter"
+    bl_category = "Shifter"
     bl_space_type = "VIEW_3D"
     bl_region_type = "TOOLS"
 
