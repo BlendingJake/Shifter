@@ -61,7 +61,7 @@ def update_shift(self, context):
         bpy.ops.object.editmode_toggle()
 
 
-def shift_position(vector, i, new_shift, old_shift):
+def shift_position(vector: Vector, i: int, new_shift: float, old_shift: float) -> Vector:
     cur = vector[i] - old_shift + new_shift
     vector[i] = cur
 
@@ -83,6 +83,7 @@ def from_string(s: str) -> set:
 def to_string(l: list) -> str:
     l2 = [str(i) for i in l]
     return ','.join(l2)
+
 
 bpy.types.Object.shifter_x_verts = StringProperty()
 bpy.types.Object.shifter_y_verts = StringProperty()
@@ -124,7 +125,7 @@ class ShifterPanel(bpy.types.Panel):
             layout.prop(ob, "shifter_shift")
 
         else:
-            layout.label("Please Select Object", icon="ERROR")
+            layout.label("Please Select An Object", icon="ERROR")
 
 
 class ShifterClear(bpy.types.Operator):
