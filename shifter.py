@@ -119,8 +119,7 @@ class ShifterPanel(bpy.types.Panel):
             else:
                 if not len(vals['x']) and not len(vals['y']) and not len(vals['z']):
                     layout.operator("mesh.shifter_convert", icon="OBJECT_DATA")
-                else:
-                    layout.label("Enter Edit Mode To Adjust Vertex Groups", icon="INFO")
+                layout.label("Enter Edit Mode To Adjust Vertex Groups", icon="INFO")
 
             layout.separator()
             layout.prop(ob, "shifter_shift")
