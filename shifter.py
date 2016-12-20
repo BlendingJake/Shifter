@@ -24,6 +24,7 @@ bl_info = {
 import bpy
 from bpy.props import FloatVectorProperty, StringProperty, EnumProperty, FloatProperty
 import bmesh
+from mathutils import Vector
 
 
 def update_shift(self, context):
@@ -40,9 +41,9 @@ def update_shift(self, context):
 
     new_shift = ob.shifter_shift
     old_shift = ob.shifter_last_shift
-    x_indices = convert_from_string(ob.shifter_x_verts)
-    y_indices = convert_from_string(ob.shifter_y_verts)
-    z_indices = convert_from_string(ob.shifter_z_verts)
+    x_indices = from_string(ob.shifter_x_verts)
+    y_indices = from_string(ob.shifter_y_verts)
+    z_indices = from_string(ob.shifter_z_verts)
 
     for i in x_indices:
         verts[i].co = shift_position(verts[i].co, 0, new_shift[0], old_shift[0])
@@ -67,7 +68,7 @@ def shift_position(vector, i, new_shift, old_shift):
     return vector
 
 
-def convert_from_string(s: str) -> set:
+def from_string(s: str) -> set:
     if s:
         sp = s.split(",")
         out = set({})
@@ -79,8 +80,9 @@ def convert_from_string(s: str) -> set:
         return set([])
 
 
-def convert_to_string(l: list) -> str:
-    return ','.join(l)
+def to_string(l: list) -> str:
+    l2 = [str(i) for i in l]
+    return ','.join(l2)
 
 bpy.types.Object.shifter_x_verts = StringProperty()
 bpy.types.Object.shifter_y_verts = StringProperty()
@@ -101,16 +103,22 @@ class ShifterPanel(bpy.types.Panel):
         ob = context.object
 
         if ob is not None:
+            vals = {"x": from_string(ob.shifter_x_verts), "y": from_string(ob.shifter_y_verts),
+                    "z": from_string(ob.shifter_z_verts)}
+
             if context.mode == "EDIT_MESH":
                 for i in ["x", "y", "z"]:
-                    verts_size = len(convert_from_string(eval("ob.shifter_{}_verts".format(i))))
-                    layout.label("{} Vertices - Currently {}".format(i.capitalize(), verts_size))
+                    layout.label("{} Vertices - Currently {}".format(i.capitalize(), len(vals[i])))
                     row = layout.row()
-                    row.operator("mesh.shifter_add", icon="ZOOMOUT").direction = i
+                    row.operator("mesh.shifter_add", icon="ZOOMIN").direction = i
+                    row.operator("mesh.shifter_remove", icon="ZOOMOUT").direction = i
                     row.operator("mesh.shifter_update", icon="FILE_REFRESH").direction = i
                     row.operator("mesh.shifter_clear", icon="CANCEL").direction = i
             else:
-                layout.label("Enter Edit Mode To Adjust Vertices", icon="INFO")
+                if not len(vals['x']) and not len(vals['y']) and not len(vals['z']):
+                    layout.operator("mesh.shifter_convert", icon="OBJECT_DATA")
+                else:
+                    layout.label("Enter Edit Mode To Adjust Vertices", icon="INFO")
 
             layout.separator()
             layout.prop(ob, "shifter_shift")
@@ -154,13 +162,11 @@ class ShifterAdd(bpy.types.Operator):
 
     def execute(self, context):
         ob = context.object
-        start_size = 0
-        end_size = 0
 
         if self.direction and ob is not None:
             verts = bmesh.from_edit_mesh(ob.data).verts
 
-            cur_set = convert_from_string(eval("ob.shifter_{}_verts".format(self.direction)))
+            cur_set = from_string(eval("ob.shifter_{}_verts".format(self.direction)))
             start_size = len(cur_set)
 
             for v in verts:
@@ -168,10 +174,10 @@ class ShifterAdd(bpy.types.Operator):
                     cur_set.add(v.index)
 
             end_size = len(cur_set)
-            str_list = [str(i) for i in cur_set]
-            exec("ob.shifter_{}_verts = convert_to_string(str_list)".format(self.direction))
+            exec("ob.shifter_{}_verts = to_string(list(cur_set))".format(self.direction))
 
-        self.report({"INFO"}, "Shifter: Added {} Vertices".format(end_size - start_size))
+            self.report({"INFO"}, "Shifter: Added {} Vertices".format(end_size - start_size))
+
         return {"FINISHED"}
 
 
@@ -186,24 +192,96 @@ class ShifterUpdate(bpy.types.Operator):
 
     def execute(self, context):
         ob = context.object
-        size = 0
 
         if self.direction and ob is not None:
             verts = bmesh.from_edit_mesh(ob.data).verts
-            str_list = []
+            indices = []
             for v in verts:
                 if v.select:
-                    str_list.append(str(v.index))
-            size = len(str_list)
+                    indices.append(v.index)
+            size = len(indices)
 
             if self.direction == "x":
-                ob.shifter_x_verts = convert_to_string(str_list)
+                ob.shifter_x_verts = to_string(indices)
             elif self.direction == "y":
-                ob.shifter_y_verts = convert_to_string(str_list)
+                ob.shifter_y_verts = to_string(indices)
             else:
-                ob.shifter_z_verts = convert_to_string(str_list)
+                ob.shifter_z_verts = to_string(indices)
 
-        self.report({"INFO"}, "Shifter: Set {} Vertices".format(size))
+            self.report({"INFO"}, "Shifter: Set {} Vertices".format(size))
+
+        return {"FINISHED"}
+
+
+class ShifterRemove(bpy.types.Operator):
+    bl_idname = "mesh.shifter_remove"
+    bl_label = "Remove"
+    direction = StringProperty()
+
+    @classmethod
+    def poll(cls, context):
+        return context.mode != "EDIT_MODE"
+
+    def execute(self, context):
+        ob = context.object
+
+        if self.direction and ob is not None:
+            verts = bmesh.from_edit_mesh(ob.data).verts
+            cur_verts = from_string(eval("ob.shifter_{}_verts".format(self.direction)))
+            removed = 0
+
+            for v in verts:
+                if v.select and v.index in cur_verts:
+                    cur_verts.remove(v.index)
+                    removed += 1
+
+            exec("ob.shifter_{}_verts = to_string(list(cur_verts))".format(self.direction))
+            self.report({"INFO"}, "Shifter: Removed {} Vertices".format(removed))
+
+        return {"FINISHED"}
+
+
+class ShifterConvert(bpy.types.Operator):
+    bl_idname = "mesh.shifter_convert"
+    bl_label = "Convert"
+    bl_description = 'Try to automatically determine vertices groups'
+
+    @classmethod
+    def poll(cls, context):
+        return context.mode != "EDIT_MODE"
+
+    def execute(self, context):
+        ob = context.object
+
+        if ob is not None:
+            bpy.ops.object.editmode_toggle()
+            verts = bmesh.from_edit_mesh(ob.data).verts
+            center = Vector((0, 0, 0))
+            size = 0
+
+            for v in verts:
+                center += v.co
+            center /= len(verts)
+
+            indices = [[], [], []]
+
+            for v in verts:
+                if v.co[0] > center[0]:
+                    indices[0].append(v.index)
+                    size += 1
+                if v.co[1] > center[1]:
+                    indices[1].append(v.index)
+                    size += 1
+                if v.co[2] > center[2]:
+                    indices[2].append(v.index)
+                    size += 1
+
+            ob.shifter_x_verts = to_string(indices[0])
+            ob.shifter_y_verts = to_string(indices[1])
+            ob.shifter_z_verts = to_string(indices[2])
+            bpy.ops.object.editmode_toggle()
+
+            self.report({"INFO"}, "Shifter: Setup {} Vertices In X, Y, Z Groups".format(size))
         return {"FINISHED"}
 
 
