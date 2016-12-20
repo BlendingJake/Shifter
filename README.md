@@ -23,3 +23,6 @@ just need to be moved, not scaled.
 adjustments might have to be done manually)
 
 3. Shift vertices using sliders
+
+### Example:
+<img src="https://media.giphy.com/media/l0HlSxZz4wcWkbwMU/source.gif" alt="Gif" style="width=480px;"/>
