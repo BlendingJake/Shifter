@@ -9,7 +9,7 @@ just need to be moved, not scaled.
 
 1. Select object and enter editmode
 
-2. Tools (<kbd>T</kbd>) > Shifter Panel
+2. Tools (<kbd>T</kbd>) > Shifter
 
 3. Assign vertices to X, Y, and Z groups
 
@@ -19,7 +19,7 @@ just need to be moved, not scaled.
 
 1. Select object
 
-2. Tools (<kbd>T</kbd>) > Shifter Panel > Convert (only works in certain cases, slight
+2. Tools (<kbd>T</kbd>) > Shifter > Convert (only works in certain cases, slight
 adjustments might have to be done manually)
 
 3. Shift vertices using sliders
